@@ -16,6 +16,7 @@ from typing import Any
 from nemo_rl.data.datasets.response_datasets.clevr import CLEVRCoGenTDataset
 from nemo_rl.data.datasets.response_datasets.deepscaler import DeepScalerDataset
 from nemo_rl.data.datasets.response_datasets.geometry3k import Geometry3KDataset
+from nemo_rl.data.datasets.response_datasets.dapo import DapoMathDataset
 from nemo_rl.data.datasets.response_datasets.oai_format_dataset import (
     OpenAIFormatDataset,
 )
@@ -73,6 +74,9 @@ def load_response_dataset(data_config, seed: int = 42):
             "Loading agentica-org/DeepScaleR-Preview-Dataset for training and validation"
         )
         base_dataset: Any = DeepScalerDataset(seed=seed)
+    elif dataset_name == "DapoMath":
+        print("Loading BytedTsinghua-SIA/DAPO-Math-17k for training and validation")
+        base_dataset: Any = DapoMathDataset(seed=seed)
     # for vlm rl training
     elif dataset_name == "clevr-cogent":
         base_dataset: Any = CLEVRCoGenTDataset(
@@ -127,4 +131,5 @@ __all__ = [
     "RefCOCODataset",
     "ResponseDataset",
     "SquadDataset",
+    "DapoMathDataset",
 ]

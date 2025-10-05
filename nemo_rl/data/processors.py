@@ -118,7 +118,7 @@ def math_hf_data_processor(
     message: list[str] = tokenizer.apply_chat_template(  # type: ignore
         [user_message],
         tokenize=False,
-        add_generation_prompt=False,
+        add_generation_prompt=True,
         add_special_tokens=False,
     )
 

@@ -459,17 +459,17 @@ class DTensorPolicyWorkerV2:
             logits.div_(self.cfg["generation"]["temperature"])
         return logits
 
-    def init_collective(self, ip: str, port: int, world_size: int) -> None:
-        """Initialize the collective communication."""
+    def init_collective(
+        self, ip: str, port: int, world_size: int, *, train_world_size: int
+    ) -> None:
         from vllm.distributed.device_communicators.pynccl import PyNcclCommunicator
         from vllm.distributed.utils import StatelessProcessGroup
 
-        if self.rank == 0:
-            pg = StatelessProcessGroup.create(
-                host=ip, port=port, rank=0, world_size=world_size
-            )
-            device = torch.cuda.current_device()
-            self.model_update_group = PyNcclCommunicator(pg, device=device)
+        pg = StatelessProcessGroup.create(
+            host=ip, port=port, rank=self.rank, world_size=world_size
+        )
+        device = torch.cuda.current_device()
+        self.model_update_group = PyNcclCommunicator(pg, device=device)
 
     def is_alive(self) -> bool:
         return True
@@ -828,7 +828,6 @@ class DTensorPolicyWorkerV2:
                                 self.model.parameters(),
                                 max_grad_norm=self.max_grad_norm,
                                 total_norm=grad_norm,
-                                dtype=torch.float32,
                             )
                         grad_norm = torch.tensor([grad_norm])
 
@@ -837,6 +836,8 @@ class DTensorPolicyWorkerV2:
 
                 losses.append(torch.tensor(mb_losses).sum().item())
 
+            # release gradient memory before rollouts
+            self.optimizer.zero_grad()
             # increment scheduler after all batches in rollout are processed
             if not eval_mode:
                 self.scheduler.step()
@@ -1769,9 +1770,8 @@ class DTensorPolicyWorkerV2:
         for _, tensor in self.model.state_dict().items():
             if isinstance(tensor, DTensor):
                 tensor = tensor.full_tensor()
-            if self.rank == 0:
-                tensor = tensor.to(self.dtype, non_blocking=True)
-                self.model_update_group.broadcast(tensor.data, src=0)
+            tensor = tensor.to(self.dtype, non_blocking=True)
+            self.model_update_group.broadcast(tensor.data, src=0)
 
         # Manually move model to cpu for cpu offload case
         # cpu offload needs model on CPU before model forward

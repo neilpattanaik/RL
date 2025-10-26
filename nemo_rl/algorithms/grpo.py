@@ -108,6 +108,9 @@ class GRPOSaveState(TypedDict):
     val_reward: NotRequired[
         float
     ]  # Optional field - may not be present during training
+    branch_reward_ema: dict[
+        str, float
+    ]  # EMA of branch (executor) rewards for adaptive penalty
 
 
 def _default_grpo_save_state() -> GRPOSaveState:
@@ -118,6 +121,7 @@ def _default_grpo_save_state() -> GRPOSaveState:
         "total_steps": 0,
         "total_valid_tokens": 0,
         "val_reward": -99999999.0,
+        "branch_reward_ema": {"think": 0.0, "direct": 0.0},
     }
 
 

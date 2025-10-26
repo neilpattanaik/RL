@@ -7,6 +7,8 @@ from nemo_rl.data.interfaces import TaskDataSpec
 """
 Copied mostly from deepscaler.py
 """
+
+
 def format_dapo_math(data: dict[str, str | float | int]) -> dict[str, list[Any] | str]:
     return {
         "messages": [
@@ -22,6 +24,7 @@ def format_dapo_math(data: dict[str, str | float | int]) -> dict[str, list[Any] 
         # For v0.1 release, nemo rl datasets require a task_name key such that user can map a task processor per unique task.
         "task_name": "math",
     }
+
 
 def format_aime_math(data: dict[str, str | float | int]) -> dict[str, list[Any] | str]:
     return {
@@ -39,11 +42,13 @@ def format_aime_math(data: dict[str, str | float | int]) -> dict[str, list[Any] 
         "task_name": "math",
     }
 
+
 def _rekey_aime(data: dict[str, Any], input_key: str) -> dict[str, Any]:
-        return {
-            "problem": data[input_key],
-            "expected_answer": data["answer"],
-        }
+    return {
+        "problem": data[input_key],
+        "expected_answer": data["answer"],
+    }
+
 
 def prepare_dapo_dataset(seed: int = 42) -> dict[str, Dataset | None]:
     """Load and split the DAPO dataset into train and test sets."""
@@ -52,21 +57,30 @@ def prepare_dapo_dataset(seed: int = 42) -> dict[str, Dataset | None]:
 
     # Load aime combined dataset for validation
     val_ds2024 = load_dataset("HuggingFaceH4/aime_2024", split="train")
-    val_ds2024 = val_ds2024.map(_rekey_aime, fn_kwargs={"input_key": "problem"}, remove_columns=val_ds2024.column_names)
+    val_ds2024 = val_ds2024.map(
+        _rekey_aime,
+        fn_kwargs={"input_key": "problem"},
+        remove_columns=val_ds2024.column_names,
+    )
 
     val_ds2025_0 = load_dataset("opencompass/AIME2025", "AIME2025-I", split="test")
     val_ds2025_1 = load_dataset("opencompass/AIME2025", "AIME2025-II", split="test")
     val_ds2025 = concatenate_datasets([val_ds2025_0, val_ds2025_1])
-    val_ds2025 = val_ds2025.map(_rekey_aime, fn_kwargs={"input_key": "question"}, remove_columns=val_ds2025.column_names)
+    val_ds2025 = val_ds2025.map(
+        _rekey_aime,
+        fn_kwargs={"input_key": "question"},
+        remove_columns=val_ds2025.column_names,
+    )
     val_ds = concatenate_datasets([val_ds2024, val_ds2025])
-    
+
     # Shuffle the training dataset with the specified seed
     train_ds = train_ds.shuffle(seed=seed)
 
     # Format the examples, removing original columns
-    train_formatted = train_ds.map(format_dapo_math, remove_columns=train_ds.column_names)
+    train_formatted = train_ds.map(
+        format_dapo_math, remove_columns=train_ds.column_names
+    )
     val_formatted = val_ds.map(format_aime_math, remove_columns=val_ds.column_names)
- 
 
     # Compute accuracy 16 times per sample (matching the DeepScaleR evaluation setting)
     val_repeated = []

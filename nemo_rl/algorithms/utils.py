@@ -72,23 +72,20 @@ def calculate_baseline_and_std_per_prompt(
 
     baseline = torch.zeros_like(rewards)
     sq_baseline = torch.zeros_like(rewards)
-    device_ordinal = rewards.get_device()
-    if device_ordinal == -1:
-        reward_device = torch.device("cpu")
-    else:
-        reward_device = torch.device(reward_device)
+    std = torch.zeros_like(rewards)
+    reward_device = rewards.device
 
     for i in range(len(unique_prompts)):
         is_matching_prompt = (prompts == unique_prompts[i]).all(1)
-        prompt_idx = torch.arange(len(prompts), device=reward_device)[
+        prompt_idx = torch.arange(len(prompts))[
             is_matching_prompt
         ]
 
         if leave_one_out_baseline:
-            baseline_mask_matrix = (1 - torch.eye(len(prompt_idx))).to(reward_device)
+            baseline_mask_matrix = (1 - torch.eye(len(prompt_idx), device=reward_device))
         else:
-            baseline_mask_matrix = torch.ones((len(prompt_idx), len(prompt_idx))).to(
-                reward_device
+            baseline_mask_matrix = torch.ones(
+                (len(prompt_idx), len(prompt_idx)), device=reward_device
             )
 
         if valid_mask[prompt_idx].sum() <= 1:
@@ -115,8 +112,15 @@ def calculate_baseline_and_std_per_prompt(
 
             baseline[prompt_idx] = prompt_baseline
             sq_baseline[prompt_idx] = prompt_baseline_square
+            std[prompt_idx] = (
+                (
+                    (prompt_baseline_square - prompt_baseline.square())
+                    * (num_valid / (num_valid - 1))
+                )
+                .sqrt()
+                .nan_to_num(0)
+            )
 
-    std = (sq_baseline - baseline.square()).sqrt().nan_to_num(0)
     return baseline, std
 
 

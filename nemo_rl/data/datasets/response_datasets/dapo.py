@@ -50,28 +50,40 @@ def _rekey_aime(data: dict[str, Any], input_key: str) -> dict[str, Any]:
     }
 
 
-def prepare_dapo_dataset(seed: int = 42) -> dict[str, Dataset | None]:
+def prepare_dapo_dataset(seed: int, aime_year: str) -> dict[str, Dataset | None]:
     """Load and split the DAPO dataset into train and test sets."""
     # Load the original dataset for training
     train_ds = load_dataset("BytedTsinghua-SIA/DAPO-Math-17k", split="train")
 
     # Load aime combined dataset for validation
-    val_ds2024 = load_dataset("HuggingFaceH4/aime_2024", split="train")
-    val_ds2024 = val_ds2024.map(
-        _rekey_aime,
-        fn_kwargs={"input_key": "problem"},
-        remove_columns=val_ds2024.column_names,
-    )
+    val_ds2024 = None
+    val_ds2025 = None
 
-    val_ds2025_0 = load_dataset("opencompass/AIME2025", "AIME2025-I", split="test")
-    val_ds2025_1 = load_dataset("opencompass/AIME2025", "AIME2025-II", split="test")
-    val_ds2025 = concatenate_datasets([val_ds2025_0, val_ds2025_1])
-    val_ds2025 = val_ds2025.map(
-        _rekey_aime,
-        fn_kwargs={"input_key": "question"},
-        remove_columns=val_ds2025.column_names,
-    )
-    val_ds = concatenate_datasets([val_ds2024, val_ds2025])
+    if "24" in aime_year:
+        val_ds2024 = load_dataset("HuggingFaceH4/aime_2024", split="train")
+        val_ds2024 = val_ds2024.map(
+            _rekey_aime,
+            fn_kwargs={"input_key": "problem"},
+            remove_columns=val_ds2024.column_names,
+        )
+    
+    if "25" in aime_year:
+        val_ds2025_0 = load_dataset("opencompass/AIME2025", "AIME2025-I", split="test")
+        val_ds2025_1 = load_dataset("opencompass/AIME2025", "AIME2025-II", split="test")
+        val_ds2025 = concatenate_datasets([val_ds2025_0, val_ds2025_1])
+        val_ds2025 = val_ds2025.map(
+            _rekey_aime,
+            fn_kwargs={"input_key": "question"},
+            remove_columns=val_ds2025.column_names,
+        )
+
+    match aime_year:
+        case "24":
+            val_ds = val_ds2024
+        case "25":
+            val_ds = val_ds2025
+        case "24_25":
+            val_ds = concatenate_datasets([val_ds2024, val_ds2025])
 
     # Shuffle the training dataset with the specified seed
     train_ds = train_ds.shuffle(seed=seed)
@@ -95,13 +107,14 @@ def prepare_dapo_dataset(seed: int = 42) -> dict[str, Dataset | None]:
 
 
 class DapoMathDataset:
-    def __init__(self, seed: int = 42) -> None:
+    def __init__(self, seed: int = 42, aime_year: str = "24_25") -> None:
         """Initialize the DAPO Math dataset with train/test split.
 
         Args:
             seed: Random seed for reproducible splitting
+            aime_year: AIME year to use for validation set. Options are '24', '25', and '24_25'.
         """
-        self.formatted_ds = prepare_dapo_dataset(seed=seed)
+        self.formatted_ds = prepare_dapo_dataset(seed=seed, aime_year=aime_year)
 
         self.task_spec = TaskDataSpec(
             task_name="DapoMath",

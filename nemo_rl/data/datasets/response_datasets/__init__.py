@@ -75,8 +75,16 @@ def load_response_dataset(data_config, seed: int = 42):
         )
         base_dataset: Any = DeepScalerDataset(seed=seed)
     elif dataset_name == "DapoMath":
-        print("Loading BytedTsinghua-SIA/DAPO-Math-17k for training and validation")
-        base_dataset: Any = DapoMathDataset(seed=seed)
+        aime_year = data_config.get("aime_year", "24_25")
+        assert aime_year in ("24", "25", "24_25"), f"Unsupported aime_year: {aime_year}. Supported values are '24', '25', and '24_25'"
+        print("Loading BytedTsinghua-SIA/DAPO-Math-17k for training")
+        if aime_year == "24":
+            print("Loading Aime 2024 as validation set")
+        elif aime_year == "25":
+            print("Loading Aime 2025 as validation set")
+        else:
+            print("Loading combined Aime 2024 and 2025 as validation set")
+        base_dataset: Any = DapoMathDataset(seed=seed, aime_year=aime_year)
     # for vlm rl training
     elif dataset_name == "clevr-cogent":
         base_dataset: Any = CLEVRCoGenTDataset(

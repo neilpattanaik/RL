@@ -40,6 +40,7 @@ from rich.logging import RichHandler
 from rich.panel import Panel
 from torch.utils.tensorboard import SummaryWriter
 
+from graph_rl.util.gen import get_last_assistant_message_toklen
 from nemo_rl.data.interfaces import LLMMessageLogType
 from nemo_rl.distributed.batched_data_dict import BatchedDataDict
 
@@ -1216,9 +1217,13 @@ def print_message_log_samples(
 
     # Create a summary panel
     avg_reward = sum(all_rewards) / len(all_rewards) if all_rewards else 0
+    avg_len = sum(get_last_assistant_message_toklen(log) for log in message_logs) / len(
+        message_logs
+    )
     stats_text = (
         f"[bold]Batch Summary[/]\n"
         f"Total Samples: [bright_yellow]{len(all_rewards)}[/]\n"
+        f"Avg Response Length: [bright_cyan]{avg_len:.2f} tokens[/]\n"
         f"Avg Reward: [bright_blue]{avg_reward:.4f}[/]\n"
         f"Min: [orange3]{min(all_rewards):.4f}[/] | Max: [bright_green]{max(all_rewards):.4f}[/]\n\n"
         + "\n".join(discrete_lines)

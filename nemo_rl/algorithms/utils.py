@@ -77,12 +77,10 @@ def calculate_baseline_and_std_per_prompt(
 
     for i in range(len(unique_prompts)):
         is_matching_prompt = (prompts == unique_prompts[i]).all(1)
-        prompt_idx = torch.arange(len(prompts))[
-            is_matching_prompt
-        ]
+        prompt_idx = torch.arange(len(prompts))[is_matching_prompt]
 
         if leave_one_out_baseline:
-            baseline_mask_matrix = (1 - torch.eye(len(prompt_idx), device=reward_device))
+            baseline_mask_matrix = 1 - torch.eye(len(prompt_idx), device=reward_device)
         else:
             baseline_mask_matrix = torch.ones(
                 (len(prompt_idx), len(prompt_idx)), device=reward_device

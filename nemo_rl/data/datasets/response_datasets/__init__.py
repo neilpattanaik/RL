@@ -24,11 +24,30 @@ from nemo_rl.data.datasets.response_datasets.oasst import OasstDataset
 from nemo_rl.data.datasets.response_datasets.openmathinstruct2 import (
     OpenMathInstruct2Dataset,
 )
+from nemo_rl.data.datasets.response_datasets.openmathreasoning import OpenMathReasoningDataset
 from nemo_rl.data.datasets.response_datasets.refcoco import RefCOCODataset
 from nemo_rl.data.datasets.response_datasets.response_dataset import ResponseDataset
 from nemo_rl.data.datasets.response_datasets.squad import SquadDataset
 from nemo_rl.data.datasets.utils import get_extra_kwargs
 
+
+def _get_validate_aime_year(data_config: dict[str, Any]) -> str:
+    if "aime_year" not in data_config:
+        print("Aime year not specified, defaulting to '24_25'. Specify aime_year in data_config to change.")
+
+    aime_year = data_config.get("aime_year", "24_25")
+    assert aime_year in ("24", "25", "24_25"), (
+        f"Unsupported aime_year: {aime_year}. Supported values are '24', '25', and '24_25'"
+    )
+
+    if aime_year == "24":
+        print("Loading Aime 2024 as validation set")
+    elif aime_year == "25":
+        print("Loading Aime 2025 as validation set")
+    else:
+        print("Loading combined Aime 2024 and 2025 as validation set")   
+
+    return aime_year 
 
 def load_response_dataset(data_config, seed: int = 42):
     """Loads response dataset."""
@@ -75,18 +94,13 @@ def load_response_dataset(data_config, seed: int = 42):
         )
         base_dataset: Any = DeepScalerDataset(seed=seed)
     elif dataset_name == "DapoMath":
-        aime_year = data_config.get("aime_year", "24_25")
-        assert aime_year in ("24", "25", "24_25"), (
-            f"Unsupported aime_year: {aime_year}. Supported values are '24', '25', and '24_25'"
-        )
-        print("Loading BytedTsinghua-SIA/DAPO-Math-17k for training")
-        if aime_year == "24":
-            print("Loading Aime 2024 as validation set")
-        elif aime_year == "25":
-            print("Loading Aime 2025 as validation set")
-        else:
-            print("Loading combined Aime 2024 and 2025 as validation set")
+        aime_year = _get_validate_aime_year(data_config)
+        print("Loading BytedTsinghua-SIA/DAPO-Math-17k for training.")
         base_dataset: Any = DapoMathDataset(seed=seed, aime_year=aime_year)
+    elif dataset_name == "OpenMathReasoning":
+        aime_year = _get_validate_aime_year(data_config)
+        print("Loading nvidia/Nemotron-RL-math-OpenMathReasoning for training.")
+        base_dataset: Any = OpenMathReasoningDataset(seed=seed, aime_year=aime_year)
     # for vlm rl training
     elif dataset_name == "clevr-cogent":
         base_dataset: Any = CLEVRCoGenTDataset(
@@ -142,4 +156,5 @@ __all__ = [
     "ResponseDataset",
     "SquadDataset",
     "DapoMathDataset",
+    "OpenMathReasoningDataset",
 ]
